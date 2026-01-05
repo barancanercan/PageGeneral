@@ -35,16 +35,17 @@ MANIFEST
 *.swp
 *.swo
 *~
-.DS_Store
 
 # Environment & Config
 .env
 .env.local
 .env.*.local
 
-# Data & Outputs
+# Data & Outputs - IMPORTANT
 data/input/*.pdf
 data/input/*.PDF
+data/processed/
+data/cache/
 output/*.json
 output/*.txt
 chroma_db/
@@ -55,7 +56,6 @@ chroma_db/
 # Cache & Temp
 .cache/
 cache/
-data/cache/
 *.tmp
 *.temp
 
@@ -81,20 +81,12 @@ htmlcov/
 .tox/
 .hypothesis/
 
-# IDE Settings
-.vscode/settings.json
-.vscode/extensions.json
-
 # Project specific
 .streamlit/
 *.md.bak
 config.local.py
 
-# Processed data (can regenerate)
-data/processed/
-*.md
-
-# Keep input folder structure
+# Keep folder structure (but ignore contents)
 !data/input/.gitkeep
 !data/processed/.gitkeep
 !output/.gitkeep
