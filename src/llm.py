@@ -4,6 +4,9 @@ Ollama (qwen2.5:7b) ile iletişim
 """
 
 import requests
+import sys
+from pathlib import Path
+sys.path.insert(0, str(Path(__file__).parent.parent))
 import config
 
 

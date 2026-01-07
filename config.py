@@ -1,6 +1,6 @@
 """
 PAGEGENERAL - Sistem Konfigürasyonu
-Minimal ve basit ayarlar. Sadece MVP için gerekli.
+Day 2: PDF → LLM Extraction → Chromadb
 """
 
 from pathlib import Path
@@ -22,6 +22,19 @@ for directory in [DATA_DIR, INPUT_DIR, PROCESSED_DIR, CACHE_DIR, OUTPUT_DIR, CHR
     directory.mkdir(parents=True, exist_ok=True)
 
 # ============================================================================
+# TÜMEN LİSTESİ (Geçici)
+# ============================================================================
+
+DIVISION_LIST = [
+    "4. Piyade Tümeni",
+    "5. Piyade Tümeni",
+    "23. Piyade Tümeni",
+    "24. Piyade Tümeni",
+    "7. Piyade Tümeni",
+    "9. Piyade Tümeni"
+]
+
+# ============================================================================
 # LLM (OLLAMA) AYARLARI
 # ============================================================================
 
@@ -32,7 +45,7 @@ LLM_MAX_TOKENS = 500
 
 
 # ============================================================================
-# EMBEDDING AYARLARI (Docling için)
+# EMBEDDING AYARLARI
 # ============================================================================
 
 EMBEDDING_MODEL_NAME = "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2"
@@ -45,6 +58,22 @@ EMBEDDING_DIMENSION = 384
 
 CHUNK_SIZE = 512        # Token cinsinden
 CHUNK_OVERLAP = 50
+
+
+# ============================================================================
+# EXTRACTION AYARLARI (LLM-based)
+# ============================================================================
+
+EXTRACTION_CONFIDENCE_THRESHOLD = 0.5  # < 0.5 ise skip et
+
+
+# ============================================================================
+# VECTOR STORE AYARLARI
+# ============================================================================
+
+VECTOR_DB_BACKEND = 'chromadb'
+SEARCH_TOP_K = 5
+CONFIDENCE_THRESHOLD = 0.7
 
 
 # ============================================================================
@@ -88,4 +117,7 @@ if __name__ == "__main__":
     print(f"🤖 LLM: {LLM_MODEL}")
     print(f"🔗 Ollama: {OLLAMA_BASE_URL}")
     print(f"⚙️  Chunk Size: {CHUNK_SIZE}")
+    print(f"📊 Tümenleri: {len(DIVISION_LIST)} tümen")
+    for div in DIVISION_LIST:
+        print(f"   - {div}")
     print("✅ Config hazır")
