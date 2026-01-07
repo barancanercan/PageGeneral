@@ -1,93 +1,28 @@
-# Virtual Environment
-venv/
-.venv/
-ENV/
-env/
-
 # Python
 __pycache__/
 *.py[cod]
 *$py.class
-*.so
-.Python
-build/
-develop-eggs/
-dist/
-downloads/
-eggs/
-.eggs/
-lib/
-lib64/
-parts/
-sdist/
-var/
-wheels/
-pip-wheel-metadata/
-share/python-wheels/
-*.egg-info/
-.installed.cfg
-*.egg
-MANIFEST
+
+# Virtual Environment
+venv/
+.venv/
+ENV/
 
 # IDE
 .vscode/
 .idea/
 *.swp
-*.swo
-*~
 
-# Environment & Config
-.env
-.env.local
-.env.*.local
-
-# Data & Outputs - IMPORTANT
+# Data
 data/input/*.pdf
 data/input/*.PDF
 data/processed/
 data/cache/
-output/*.json
-output/*.txt
-chroma_db/
-*.db
-*.sqlite
-*.sqlite3
-
-# Cache & Temp
-.cache/
-cache/
-*.tmp
-*.temp
-
-# Ollama & Models
-.ollama/
-models/
-ollama_models/
-
-# Logs
-*.log
-logs/
-*.log.*
 
 # OS
 .DS_Store
 Thumbs.db
-*.bak
 
-# Testing
-.pytest_cache/
-.coverage
-htmlcov/
-.tox/
-.hypothesis/
-
-# Project specific
-.streamlit/
-*.md.bak
-config.local.py
-
-# Keep folder structure (but ignore contents)
+# Keep folders
 !data/input/.gitkeep
 !data/processed/.gitkeep
-!output/.gitkeep
-!chroma_db/.gitkeep

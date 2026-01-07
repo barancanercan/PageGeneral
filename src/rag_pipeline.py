@@ -1,6 +1,6 @@
 """
-PAGEGENERAL - RAG Pipeline (Day 2)
-PDF → LLM Extraction → Chromadb
+PageGeneral - RAG Pipeline
+Simplified: PDF → Extract divisions → JSON
 """
 
 from pathlib import Path
@@ -9,165 +9,97 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from src.pdf_parser import PDFParser
 from src.division_extractor import DivisionExtractor
-from src.chunker import SmartChunker
-from src.vector_store import VectorStore
-from src.llm import OllamaClient
 import config
-import json
-from datetime import datetime
 
 
 class RAGPipeline:
-    """Ana RAG sistemi: PDF → LLM Extraction → Chromadb"""
+    """Extract Turkish Infantry Divisions from PDF"""
 
     def __init__(self, book_name: str, book_id: str):
         self.book_name = book_name
         self.book_id = book_id
-
         self.parser = PDFParser()
         self.extractor = DivisionExtractor(config.DIVISION_LIST)
-        self.chunker = SmartChunker(book_name, book_id)
-        self.vs = VectorStore()
-        self.llm = OllamaClient()
 
-    def ingest_pdf(self, pdf_path: str | Path) -> dict:
+    def extract_divisions(self, pdf_path):
         """
-        Tüm pipeline: PDF → Chromadb
+        Main pipeline: PDF → Extract divisions → JSON output
 
         Args:
-            pdf_path: PDF dosyasının yolu
+            pdf_path: Path to PDF file
 
         Returns:
-            {
-                "status": "success" | "error",
-                "divisions_found": ["4. Piyade Tümeni", ...],
-                "total_paragraphs": 150,
-                "chunks_created": 120,
-                "error": (varsa)
-            }
+            List[{
+                "para_id": int,
+                "text": str,
+                "divisions": [str],
+                "confidence": float,
+                "source_page": int,
+                "book_name": str,
+                "book_id": str
+            }]
         """
-        pdf_path = Path(pdf_path)
 
-        try:
-            # 1. PDF parse
-            if config.VERBOSE:
-                print(f"\n📄 ADIM 1: PDF Parse Ediliyor...")
+        if config.VERBOSE:
+            print(f"\n📄 STEP 1: PDF Parse")
 
-            parse_result = self.parser.parse(pdf_path)
+        # 1. Parse PDF → Text
+        parse_result = self.parser.parse(pdf_path)
 
-            if parse_result['status'] != 'success':
-                return {
-                    "status": "error",
-                    "error": parse_result.get('error')
-                }
+        if parse_result['status'] != 'success':
+            raise Exception(f"PDF parse failed: {parse_result['error']}")
 
-            content = parse_result['content']
+        content = parse_result['content']
 
-            # 2. Paragraf böl
-            if config.VERBOSE:
-                print(f"\n✂️  ADIM 2: Paragraf Bölünüyor...")
+        if config.VERBOSE:
+            print(f"\n✂️  STEP 2: Split Paragraphs")
 
-            paragraphs = content.split('\n\n')
-            paragraphs = [p.strip() for p in paragraphs if p.strip()]
+        # 2. Split paragraphs
+        paragraphs = content.split('\n\n')
+        paragraphs = [p.strip() for p in paragraphs if p.strip()]
 
-            if config.VERBOSE:
-                print(f"   {len(paragraphs)} paragraf bulundu")
+        if config.VERBOSE:
+            print(f"   {len(paragraphs)} paragraphs found")
 
-            # 3. LLM-based extraction
-            if config.VERBOSE:
-                print(f"\n🤖 ADIM 3: LLM ile Division Extraction...")
+        if config.VERBOSE:
+            print(f"\n🤖 STEP 3: LLM Division Extraction")
 
-            extraction_results = self.extractor.extract(paragraphs, verbose=True)
+        # 3. Extract divisions (LLM)
+        extraction_results = self.extractor.extract(paragraphs, verbose=True)
 
-            # 4. Chunks oluştur + metadata
-            if config.VERBOSE:
-                print(f"\n📦 ADIM 4: Chunks Oluşturuluyor...")
+        if config.VERBOSE:
+            print(f"\n📦 STEP 4: Format Output")
 
-            chunks = self.chunker.create_chunks(extraction_results)
+        # 4. Format output (Berke format)
+        output = []
 
-            if not chunks:
-                return {
-                    "status": "error",
-                    "error": "Hiç chunk oluşturulamadı"
-                }
+        for result in extraction_results:
+            # Skip if no divisions found
+            if not result["divisions"]:
+                continue
 
-            # 5. Embeddings + Chromadb
-            if config.VERBOSE:
-                print(f"\n🔗 ADIM 5: Chromadb'ye Yükleniyor...")
-
-            self.vs.ingest_chunks(chunks)
-
-            # 6. İstatistikler
-            divisions = set()
-            for chunk in chunks:
-                # division STRING'dir, split et!
-                division_str = chunk["metadata"]["division"]
-
-                # Virgülle ayrılmış division'ları parse et
-                if division_str:
-                    for div in division_str.split(","):
-                        div_clean = div.strip()
-                        if div_clean:  # Boş değerleri skip et
-                            divisions.add(div_clean)
-
-            if config.VERBOSE:
-                print(f"\n✅ TAMAMLANDI!")
-                print(f"   Tümenleri: {list(divisions)}")
-                print(f"   Chunks: {len(chunks)}")
-
-            return {
-                "status": "success",
-                "divisions_found": sorted(list(divisions)),
-                "total_paragraphs": len(paragraphs),
-                "chunks_created": len(chunks),
+            # Create output record
+            record = {
+                "para_id": result["para_id"],
+                "text": result["text"],
+                "divisions": result["divisions"],
+                "confidence": result["confidence"],
+                "source_page": self._calculate_page(result["para_id"]),
                 "book_name": self.book_name,
                 "book_id": self.book_id
             }
 
-        except Exception as e:
-            return {
-                "status": "error",
-                "error": str(e)
-            }
+            output.append(record)
 
+        if config.VERBOSE:
+            print(f"   {len(output)} records with divisions")
 
-def main():
-    """Test: PDF yükle ve query et"""
+        return output
 
-    # Config
-    book_name = "Türk İstiklal Harbi - Mondros Mütarekesi"
-    book_id = "turk_istiklal_harbi_mondros"
+    def _calculate_page(self, para_id: int) -> int:
+        """
+        Estimate page number from paragraph ID
 
-    pipeline = RAGPipeline(book_name, book_id)
-
-    # PDF'leri bul
-    pdf_files = list(config.INPUT_DIR.glob("*.pdf"))
-
-    if not pdf_files:
-        print(f"❌ {config.INPUT_DIR} klasöründe PDF bulunamadı!")
-        return
-
-    print(f"\n🎖️  PAGEGENERAL - PDF → LLM → Chromadb\n")
-    print(f"📂 {len(pdf_files)} PDF bulundu\n")
-
-    # İlk PDF'i yükle
-    pdf_file = pdf_files[0]
-    print(f"📥 Yükleniyor: {pdf_file.name}\n")
-
-    ingest_result = pipeline.ingest_pdf(pdf_file)
-
-    if ingest_result['status'] != 'success':
-        print(f"\n❌ Hata: {ingest_result['error']}")
-        return
-
-    print(f"\n" + "=" * 60)
-    print(f"📊 SONUÇLAR:")
-    print(f"=" * 60)
-    print(f"✅ Tümenleri: {', '.join(ingest_result['divisions_found'])}")
-    print(f"📝 Toplam Paragraf: {ingest_result['total_paragraphs']}")
-    print(f"📦 Oluşturulan Chunks: {ingest_result['chunks_created']}")
-    print(f"=" * 60)
-
-
-if __name__ == "__main__":
-    main()
+        Assumption: ~50 paragraphs per page
+        """
+        return (para_id // 50) + 1

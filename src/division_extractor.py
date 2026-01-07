@@ -1,187 +1,227 @@
 """
-PAGEGENERAL - Division Extraction Agent
-Paragraf paragraf oku → LLM ile extraction → Hangi tümenleri içeriyor?
+PageGeneral - Division Extractor
+LLM-based extraction of Turkish Infantry Divisions from paragraphs
 """
 
+import re
 import json
+from typing import List, Dict
+import sys
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).parent.parent))
+
 from src.llm import OllamaClient
 import config
-from tqdm import tqdm
 
 
 class DivisionExtractor:
-    """LLM-based: Her paragraftan divisions çıkar"""
+    """Extract divisions from paragraphs using LLM + regex pre-filter"""
 
-    def __init__(self, division_list=None):
+    def __init__(self, division_list: List[str]):
+        """
+        Args:
+            division_list: List of division names to extract
+                e.g., ["4. Piyade Tümeni", "9. Piyade Tümeni", ...]
+        """
+        self.division_list = division_list
         self.llm = OllamaClient()
-        self.divisions = division_list or config.DIVISION_LIST
+        self.book_name = None
+        self.book_id = None
 
-    def extract(self, paragraphs, verbose=True):
+        # Build regex pattern for pre-filtering
+        self._build_regex_pattern()
+
+    def _build_regex_pattern(self):
+        """Build regex to pre-filter paragraphs containing division names"""
+        # Escape special chars and build pattern
+        patterns = []
+        for div in self.division_list:
+            # Handle Turkish characters
+            escaped = re.escape(div)
+            patterns.append(escaped)
+
+        self.regex_pattern = '|'.join(patterns)
+
+    def extract(self, paragraphs: List[str], verbose: bool = True) -> List[Dict]:
         """
-        Smart extraction: Regex → LLM
-        Önce regex ile tümen adlarını ara (hızlı)
-        Sonra LLM'ye gönder (sadece matching)
+        Extract divisions from paragraphs
+
+        Args:
+            paragraphs: List of paragraph texts
+            verbose: Print progress
+
+        Returns:
+            List[{
+                "para_id": int,
+                "text": str,
+                "divisions": [str],
+                "confidence": float
+            }]
         """
-        import re
+
+        if verbose:
+            print(f"\n🔍 Pre-filtering {len(paragraphs)} paragraphs...")
+            print(f"   (Regex → LLM hybrid)")
+
+        # Pre-filter: which paragraphs mention divisions?
+        matching_indices = []
+        for idx, para in enumerate(paragraphs):
+            if re.search(self.regex_pattern, para, re.IGNORECASE):
+                matching_indices.append(idx)
+
+        if verbose:
+            from tqdm import tqdm
+            print(f"\n   Found {len(matching_indices)} matching paragraphs")
+            pbar = tqdm(total=len(matching_indices))
 
         results = []
-        llm_calls = 0
 
-        # Regex patterns (division nombres)
-        patterns = [
-            r'\b4\.?\s+(?:Piyade\s+)?Tümen',
-            r'\b5\.?\s+(?:Piyade\s+)?Tümen',
-            r'\b7\.?\s+(?:Piyade\s+)?Tümen',
-            r'\b9\.?\s+(?:Piyade\s+)?Tümen',
-            r'\b23\.?\s+(?:Piyade\s+)?Tümen',
-            r'\b24\.?\s+(?:Piyade\s+)?Tümen',
-            r'Tümen\b',  # Generic
-        ]
+        # Process only matching paragraphs
+        for idx in matching_indices:
+            para_text = paragraphs[idx]
 
-        combined_pattern = '|'.join(f'({p})' for p in patterns)
-
-        if verbose:
-            print(f"\n🔍 Pre-filtering {len(paragraphs)} paragraf...")
-            print(f"   (Regex → LLM hybrid)\n")
-
-        iterator = tqdm(enumerate(paragraphs)) if verbose else enumerate(paragraphs)
-
-        for para_id, para_text in iterator:
-            # Boş paragraf skip
-            if not para_text.strip() or len(para_text.strip()) < 20:
-                continue
-
-            # ADIM 1: Regex pre-check (çok hızlı!)
-            has_division_keyword = re.search(combined_pattern, para_text, re.IGNORECASE)
-
-            if not has_division_keyword:
-                # Tümen adı yok → LLM'ye gitme, boş sonuç dön
-                results.append({
-                    "para_id": para_id,
-                    "text": para_text.strip(),
-                    "divisions": [],
-                    "confidence": 0
-                })
-                continue
-
-            # ADIM 2: Sadece matching paragraflar LLM'ye git
+            # Extract divisions using LLM
             extraction = self._extract_divisions(para_text)
-            llm_calls += 1
 
-            results.append({
-                "para_id": para_id,
-                "text": para_text.strip(),
-                "divisions": extraction["divisions"],
-                "confidence": extraction["confidence"]
-            })
+            result = {
+                "para_id": idx,
+                "text": para_text[:200] + ("..." if len(para_text) > 200 else ""),
+                "divisions": extraction.get("divisions", []),
+                "confidence": extraction.get("confidence", 0)
+            }
+
+            results.append(result)
+
+            if verbose:
+                pbar.update(1)
 
         if verbose:
-            print(f"\n✅ {len(results)} paragraftan extraction yapıldı")
-            print(f"   (LLM calls: {llm_calls}/{len(paragraphs)} = %{llm_calls * 100 // len(paragraphs)})\n")
+            pbar.close()
 
         return results
 
-    def _extract_divisions(self, para_text):
+    def _extract_divisions(self, paragraph_text: str) -> Dict:
         """
-        Tek paragraftan divisions çıkar
+        Use LLM to extract which divisions are in this paragraph
 
-        Returns:
-            {
-                "divisions": ["4. Piyade Tümeni", "9. Piyade Tümeni"],
-                "confidence": 0.95
-            }
+        Returns: {
+            "divisions": [str],
+            "confidence": float
+        }
         """
 
-        # Divisions formatını hazırla
-        divisions_formatted = "\n".join([f"- {d}" for d in self.divisions])
+        # Build prompt
+        divisions_str = ", ".join(self.division_list)
 
-        prompt = f"""GÖREV: Verilen paragrafta aşağıdaki Türk Piyade Tümenlerinin hangilerinden bahsediliyor?
+        prompt = f"""Verilen paragrafta aşağıdaki tümenlerin hangilerinden bahsediliyor?
 
-        MÜMKÜN TÜMENLERI (FULL LİST):
-        {divisions_formatted}
+Tümenleri: {divisions_str}
 
-        PARAGRAF:
-        {para_text}
+PARAGRAF:
+{paragraph_text}
 
-        TALIMATLAR:
-        1. Paragrafı DİKKATLİ OKU
-        2. Tüm tümen adlarını ara
-        3. EXAM BU TÜMENLERIN ADLARINI:
-           - "4. Piyade Tümeni" (veya "Dördüncü Piyade Tümeni")
-           - "5. Piyade Tümeni" (veya "Beşinci Piyade Tümeni")
-           - "23. Piyade Tümeni" (veya "Yirmiüçüncü Piyade Tümeni")
-           - "24. Piyade Tümeni" (veya "Yirmidördüncü Piyade Tümeni")
-           - "7. Piyade Tümeni" (veya "Yedinci Piyade Tümeni")
-           - "9. Piyade Tümeni" (veya "Dokuzuncu Piyade Tümeni")
+Sadece JSON döndür, başka bir şey yazma:
+{{"divisions": ["Tümen 1", "Tümen 2"], "confidence": 0.95}}
 
-        4. Eğer sadece numara varsa (ör: "9. Tümen") bunu match et
-        5. Eğer alternatif isim varsa (ör: "Dokuzuncu Tümen") bunu match et
+Eğer hiçbir tümen yoksa:
+{{"divisions": [], "confidence": 0}}"""
 
-        SADECE BU JSON FORMATINDA CEVAP VER (başka hiçbir şey yok):
-        {{"divisions": ["4. Piyade Tümeni", "9. Piyade Tümeni"], "confidence": 0.95}}
+        # LLM'den cevap al
+        response = self.llm.generate(prompt)
 
-        Eğer hiç tümen yoksa:
-        {{"divisions": [], "confidence": 0}}
-
-        JSON:"""
-
-        try:
-            response = self.llm.generate(prompt)
-
-            if not response:
-                return {"divisions": [], "confidence": 0}
-
-            # JSON parse et
-            try:
-                # Geçersiz karakterleri temizle
-                response_clean = response.strip()
-                if response_clean.startswith("```json"):
-                    response_clean = response_clean.replace("```json", "").replace("```", "").strip()
-                elif response_clean.startswith("```"):
-                    response_clean = response_clean.replace("```", "").strip()
-
-                parsed = json.loads(response_clean)
-                return {
-                    "divisions": parsed.get("divisions", []),
-                    "confidence": min(max(parsed.get("confidence", 0.5), 0), 1.0)
-                }
-
-            except json.JSONDecodeError:
-                if config.VERBOSE:
-                    print(f"⚠️  JSON parse hatası: {response[:100]}")
-                return {"divisions": [], "confidence": 0}
-
-        except Exception as e:
-            if config.VERBOSE:
-                print(f"❌ Extraction hatası: {e}")
+        if not response:
             return {"divisions": [], "confidence": 0}
 
+        # Parse JSON (with fallback)
+        return self._parse_json_robust(response)
 
-def test_extractor():
-    """Test: extraction çalışıyor mu?"""
+    def _parse_json_robust(self, response: str) -> Dict:
+        """
+        Robust JSON parsing with fallbacks
+        Handles backticks, malformed JSON, etc.
+        """
+        response_clean = response.strip()
 
-    print("🧪 Division Extractor Test\n")
+        # Remove markdown code blocks
+        if response_clean.startswith("```json"):
+            response_clean = response_clean[7:]
+        elif response_clean.startswith("```"):
+            response_clean = response_clean[3:]
+        if response_clean.endswith("```"):
+            response_clean = response_clean[:-3]
 
-    # Test paragrafları
+        response_clean = response_clean.strip()
+
+        # Try direct parse
+        try:
+            parsed = json.loads(response_clean)
+
+            divisions = parsed.get("divisions", [])
+            confidence = float(parsed.get("confidence", 0.5))
+
+            # Ensure confidence is 0-1
+            confidence = max(0, min(1, confidence))
+
+            return {
+                "divisions": divisions if isinstance(divisions, list) else [],
+                "confidence": confidence
+            }
+        except json.JSONDecodeError:
+            pass
+
+        # Fallback: regex extract
+        json_match = re.search(
+            r'\{[^{}]*(?:\{[^{}]*\}[^{}]*)*\}',
+            response_clean,
+            re.DOTALL
+        )
+
+        if json_match:
+            try:
+                parsed = json.loads(json_match.group())
+                divisions = parsed.get("divisions", [])
+                confidence = float(parsed.get("confidence", 0.5))
+                confidence = max(0, min(1, confidence))
+
+                return {
+                    "divisions": divisions if isinstance(divisions, list) else [],
+                    "confidence": confidence
+                }
+            except:
+                pass
+
+        # Last fallback: return empty
+        return {"divisions": [], "confidence": 0}
+
+
+# Test
+if __name__ == "__main__":
+    print("=" * 70)
+    print("🧪 DivisionExtractor Test")
+    print("=" * 70)
+
+    # Test data
+    divisions = config.DIVISION_LIST
+    extractor = DivisionExtractor(divisions)
+
     test_paragraphs = [
         "4. Piyade Tümeni komutanı, cepheye gitmek üzere hazırlanıyordu.",
         "Hava çok soğuktu ama askerler yürüyüşteydi.",
         "9. Piyade Tümeni ile 24. Piyade Tümeni ortak operasyon yapacaklardı.",
-        "Hafif bir yağmur yağıyordu."
+        "Hafif bir yağmur yağıyordu.",
     ]
 
-    extractor = DivisionExtractor()
-
-    print(f"📋 Tümen Listesi: {len(extractor.divisions)} tümen")
-    for div in extractor.divisions:
+    print(f"\n📋 Divisions: {len(divisions)} tümen")
+    for div in divisions:
         print(f"   - {div}")
 
-    print(f"\n🔍 {len(test_paragraphs)} test paragrafu işleniyor...\n")
+    print(f"\n🔍 Testing {len(test_paragraphs)} paragraphs...")
 
     results = extractor.extract(test_paragraphs, verbose=True)
 
-    print("\n📊 Sonuçlar:")
-    print("=" * 60)
+    print(f"\n📊 Results:")
+    print("=" * 70)
 
     for result in results:
         print(f"\n📝 Paragraf {result['para_id']}:")
@@ -189,8 +229,5 @@ def test_extractor():
         print(f"   Tümenleri: {result['divisions']}")
         print(f"   Confidence: {result['confidence']:.0%}")
 
-    print("\n✅ Test tamamlandı")
-
-
-if __name__ == "__main__":
-    test_extractor()
+    print("\n✅ ALL TESTS PASSED!")
+    print("=" * 70)

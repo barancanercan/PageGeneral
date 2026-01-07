@@ -1,123 +1,54 @@
 """
-PAGEGENERAL - Sistem Konfigürasyonu
-Day 2: PDF → LLM Extraction → Chromadb
+PageGeneral - Configuration
+Minimal settings for PDF extraction
 """
 
 from pathlib import Path
 
 # ============================================================================
-# TEMEL PATHS
+# PATHS
 # ============================================================================
 
 PROJECT_ROOT = Path(__file__).parent
 DATA_DIR = PROJECT_ROOT / "data"
-INPUT_DIR = DATA_DIR / "input"              # PDF'ler buraya
-PROCESSED_DIR = DATA_DIR / "processed"      # İşlenmiş markdown
+INPUT_DIR = DATA_DIR / "input"
+PROCESSED_DIR = DATA_DIR / "processed"
 CACHE_DIR = DATA_DIR / "cache"
-OUTPUT_DIR = PROJECT_ROOT / "output"        # Sorgu sonuçları
-CHROMA_DB_DIR = PROJECT_ROOT / "chroma_db"  # Vector database
+OUTPUT_DIR = PROJECT_ROOT / "output"
 
-# Klasörleri oluştur
-for directory in [DATA_DIR, INPUT_DIR, PROCESSED_DIR, CACHE_DIR, OUTPUT_DIR, CHROMA_DB_DIR]:
+# Create directories
+for directory in [DATA_DIR, INPUT_DIR, PROCESSED_DIR, CACHE_DIR, OUTPUT_DIR]:
     directory.mkdir(parents=True, exist_ok=True)
 
 # ============================================================================
-# TÜMEN LİSTESİ (Geçici)
-# ============================================================================
-
-DIVISION_LIST = [
-    "4. Piyade Tümeni",
-    "5. Piyade Tümeni",
-    "23. Piyade Tümeni",
-    "24. Piyade Tümeni",
-    "7. Piyade Tümeni",
-    "9. Piyade Tümeni"
-]
-
-# ============================================================================
-# LLM (OLLAMA) AYARLARI
+# OLLAMA
 # ============================================================================
 
 OLLAMA_BASE_URL = "http://localhost:11434"
-LLM_MODEL = "qwen2.5:7b"        # ← Türkçe için en iyi
-LLM_TEMPERATURE = 0.1           # Düşük = daha deterministik
+LLM_MODEL = "qwen2.5:7b"
+LLM_TEMPERATURE = 0.1
 LLM_MAX_TOKENS = 500
 
-
 # ============================================================================
-# EMBEDDING AYARLARI
-# ============================================================================
-
-EMBEDDING_MODEL_NAME = "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2"
-EMBEDDING_DIMENSION = 384
-
-
-# ============================================================================
-# CHUNKING AYARLARI
+# DIVISIONS - Updated for actual PDF content
 # ============================================================================
 
-CHUNK_SIZE = 512        # Token cinsinden
-CHUNK_OVERLAP = 50
-
-
-# ============================================================================
-# EXTRACTION AYARLARI (LLM-based)
-# ============================================================================
-
-EXTRACTION_CONFIDENCE_THRESHOLD = 0.5  # < 0.5 ise skip et
-
-
-# ============================================================================
-# VECTOR STORE AYARLARI
-# ============================================================================
-
-VECTOR_DB_BACKEND = 'chromadb'
-SEARCH_TOP_K = 5
-CONFIDENCE_THRESHOLD = 0.7
-
+DIVISION_LIST = [
+    "5 nci Kafkas Tümeni",
+    "10 ncu Kafkas Tümeni",
+    "11 nci Kafkas Tümeni",
+    "12 nci Tümen",
+    "15 nci Tümen",
+    "23 ncü Tümen",
+    "24 ncü Tümen",
+    "27 nd Tümen",
+    "36 ncı Tümen",
+    "41 nci Tümen"
+]
 
 # ============================================================================
-# ARAMA AYARLARI
+# EXTRACTION
 # ============================================================================
 
-BM25_TOP_K = 10         # Kaç belge al
-SEMANTIC_TOP_K = 10
-RERANK_TOP_K = 5        # Son kaç dokuman
-FINAL_RETRIEVAL_K = 3   # Kaç sonuç döndür
-
-
-# ============================================================================
-# SİSTEM AYARLARI
-# ============================================================================
-
-STRICT_CONTEXT_MODE = True      # Yalnızca bağlamdan cevap ver
-REQUIRE_CITATIONS = True        # Kaynakları göster
-VERBOSE = True                  # Detaylı çıktı
-
-
-# ============================================================================
-# TÜRKÇE AYARLARI
-# ============================================================================
-
-TURKISH_STOPWORDS = {
-    "ve", "ile", "bir", "bu", "o", "de", "da", "için",
-    "olarak", "olan", "gibi", "çok", "kendi", "her"
-}
-
-
-# ============================================================================
-# TEST
-# ============================================================================
-
-if __name__ == "__main__":
-    print("📋 CONFIG AYARLARI")
-    print(f"🏠 Proje: {PROJECT_ROOT}")
-    print(f"📂 Giriş: {INPUT_DIR}")
-    print(f"📂 Çıkış: {OUTPUT_DIR}")
-    print(f"🤖 LLM: {LLM_MODEL}")
-    print(f"🔗 Ollama: {OLLAMA_BASE_URL}")
-    print(f"⚙️  Chunk Size: {CHUNK_SIZE}")
-    print(f"📊 Tümenleri: {len(DIVISION_LIST)} tümen")
-    for div in DIVISION_LIST:
-        print(f"   - {div}")
-    print("✅ Config hazır")
+EXTRACTION_CONFIDENCE_THRESHOLD = 0.5
+VERBOSE = True
