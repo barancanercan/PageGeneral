@@ -2,6 +2,13 @@
 
 Turkish Military Division Extraction from Historical PDFs using Local LLM (Qwen2.5-7B).
 
+## Features
+
+- PDF parsing with page-level paragraph extraction
+- Regex pre-filtering + LLM hybrid extraction
+- Dynamic confidence scoring (0.0-1.0)
+- Accurate PDF page number tracking
+
 ## Project Structure
 
 ```
@@ -11,9 +18,11 @@ PageGeneral/
 ├── scripts/
 │   └── extract.py         # Main extraction script
 ├── src/
-│   ├── pdf_parser.py      # PDF to text
+│   ├── pdf_parser.py      # PDF to text with page info
 │   ├── llm.py             # Qwen2.5 local client
 │   └── division_extractor.py
+├── tests/
+│   └── test_2pages.py     # Test script
 ├── data/
 │   ├── input/             # Place PDFs here
 │   └── processed/         # Markdown outputs
@@ -37,6 +46,12 @@ pip install -r requirements.txt
 python scripts/extract.py
 ```
 
+3. Test with specific pages:
+
+```bash
+python tests/test_2pages.py
+```
+
 ## Output Format
 
 ```json
@@ -45,12 +60,21 @@ python scripts/extract.py
   "embedding": [],
   "document": "Full paragraph text",
   "metadata": {
-    "division": ["5 nci Kafkas Tümeni", "10 ncu Kafkas Tümeni"],
-    "confidence": 0.95,
-    "source_page": 5
+    "division": ["15. Tümen", "5. Kafkas Tümeni"],
+    "confidence": 1.0,
+    "source_page": 241
   }
 }
 ```
+
+### Confidence Scoring
+
+| Score | Meaning |
+|-------|---------|
+| 1.0 | Division name explicitly found |
+| 0.8-0.9 | Division number found, format differs |
+| 0.6-0.7 | Indirect reference |
+| 0.0 | No division found |
 
 ## Configuration
 

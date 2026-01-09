@@ -46,12 +46,10 @@ def main():
             print(f"❌ Parse hatası: {parse_result.get('error')}")
             continue
         
-        content = parse_result['content']
-        
-        paragraphs = content.split('\n\n')
-        paragraphs = [p.strip() for p in paragraphs if p.strip()]
-        
-        print(f"✂️  {len(paragraphs)} paragraf oluşturuldu")
+        # Sayfa bilgisi ile paragrafları al
+        paragraphs = parse_result.get('paragraphs', [])
+
+        print(f"✂️  {len(paragraphs)} paragraf oluşturuldu (sayfa bilgisi ile)")
         
         print(f"\n🔍 Extraction başlıyor...")
         extractor = DivisionExtractor(divisions)

@@ -44,20 +44,23 @@ class DivisionExtractor:
 
         self.regex_pattern = '|'.join(patterns)
 
-    def extract(self, paragraphs: List[str], verbose: bool = True) -> List[Dict]:
+    def extract(self, paragraphs: List[Dict], verbose: bool = True) -> List[Dict]:
         """
         Extract divisions from paragraphs
 
         Args:
-            paragraphs: List of paragraph texts
+            paragraphs: List of {"text": str, "page": int} dicts
             verbose: Print progress
 
         Returns:
             List[{
-                "para_id": int,
-                "text": str,
-                "divisions": [str],
-                "confidence": float
+                "id": str,
+                "document": str,
+                "metadata": {
+                    "division": [str],
+                    "confidence": float,
+                    "source_page": int
+                }
             }]
         """
 
@@ -68,7 +71,8 @@ class DivisionExtractor:
         # Pre-filter: which paragraphs mention divisions?
         matching_indices = []
         for idx, para in enumerate(paragraphs):
-            if re.search(self.regex_pattern, para, re.IGNORECASE):
+            para_text = para["text"] if isinstance(para, dict) else para
+            if re.search(self.regex_pattern, para_text, re.IGNORECASE):
                 matching_indices.append(idx)
 
         if verbose:
@@ -80,7 +84,9 @@ class DivisionExtractor:
 
         # Process only matching paragraphs
         for idx in matching_indices:
-            para_text = paragraphs[idx]
+            para = paragraphs[idx]
+            para_text = para["text"] if isinstance(para, dict) else para
+            para_page = para.get("page", idx) if isinstance(para, dict) else idx
 
             # Extract divisions using LLM
             extraction = self._extract_divisions(para_text)
@@ -92,7 +98,7 @@ class DivisionExtractor:
                 "metadata": {
                     "division": extraction.get("divisions", []),
                     "confidence": extraction.get("confidence", 0),
-                    "source_page": idx
+                    "source_page": para_page
                 }
             }
 
@@ -121,16 +127,21 @@ class DivisionExtractor:
 
         prompt = f"""Verilen paragrafta aşağıdaki tümenlerin hangilerinden bahsediliyor?
 
-Tümenleri: {divisions_str}
+Tümenler: {divisions_str}
 
 PARAGRAF:
 {paragraph_text}
 
-Sadece JSON döndür, başka bir şey yazma:
-{{"divisions": ["Tümen 1", "Tümen 2"], "confidence": 0.95}}
+KURALLAR:
+1. Sadece listede olan tümenleri döndür
+2. Confidence değerini şu kriterlere göre belirle:
+   - 1.0: Tümen adı açıkça ve tam olarak geçiyor
+   - 0.8-0.9: Tümen numarası geçiyor ama format biraz farklı
+   - 0.6-0.7: Dolaylı referans veya belirsiz ifade
+   - 0.0: Hiç tümen bulunamadı
 
-Eğer hiçbir tümen yoksa:
-{{"divisions": [], "confidence": 0}}"""
+Sadece JSON döndür:
+{{"divisions": ["bulunan tümenler"], "confidence": 0.0-1.0 arası değer}}"""
 
         # LLM'den cevap al
         response = self.llm.generate(prompt)
@@ -211,10 +222,10 @@ if __name__ == "__main__":
     extractor = DivisionExtractor(divisions)
 
     test_paragraphs = [
-        "5 nci Kafkas Tümeni komutanı, cepheye gitmek üzere hazırlanıyordu.",
-        "Hava çok soğuktu ama askerler yürüyüşteydi.",
-        "24 ncü Tümen ile 36 ncı Tümen ortak operasyon yapacaklardı.",
-        "Hafif bir yağmur yağıyordu.",
+        {"text": "5 nci Kafkas Tümeni komutanı, cepheye gitmek üzere hazırlanıyordu.", "page": 1},
+        {"text": "Hava çok soğuktu ama askerler yürüyüşteydi.", "page": 2},
+        {"text": "24 ncü Tümen ile 36 ncı Tümen ortak operasyon yapacaklardı.", "page": 3},
+        {"text": "Hafif bir yağmur yağıyordu.", "page": 4},
     ]
 
     print(f"\n📋 Divisions: {len(divisions)} tümen")
@@ -229,10 +240,11 @@ if __name__ == "__main__":
     print("=" * 70)
 
     for result in results:
-        print(f"\n📝 Paragraf {result['para_id']}:")
-        print(f"   Text: {result['text'][:80]}...")
-        print(f"   Tümenleri: {result['divisions']}")
-        print(f"   Confidence: {result['confidence']:.0%}")
+        print(f"\n📝 Paragraf {result['id']}:")
+        print(f"   Text: {result['document'][:80]}...")
+        print(f"   Tümenleri: {result['metadata']['division']}")
+        print(f"   Sayfa: {result['metadata']['source_page']}")
+        print(f"   Confidence: {result['metadata']['confidence']:.0%}")
 
     print("\n✅ ALL TESTS PASSED!")
     print("=" * 70)

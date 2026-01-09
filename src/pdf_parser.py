@@ -64,9 +64,25 @@ class PDFParser:
             if config.VERBOSE:
                 print(f"✅ Kaydedildi: {output_file}")
 
+            # Sayfa bazlı paragrafları çıkar
+            paragraphs_with_pages = []
+            for i, page in enumerate(reader.pages, 1):
+                text = page.extract_text()
+                if text and text.strip():
+                    # Her sayfadaki paragrafları ayır
+                    page_paragraphs = text.strip().split('\n\n')
+                    for para in page_paragraphs:
+                        para = para.strip()
+                        if para:
+                            paragraphs_with_pages.append({
+                                "text": para,
+                                "page": i
+                            })
+
             return {
                 "status": "success",
                 "content": markdown_content,
+                "paragraphs": paragraphs_with_pages,
                 "output_path": str(output_file),
                 "filename": pdf_path.name,
                 "pages": num_pages
