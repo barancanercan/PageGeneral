@@ -86,10 +86,14 @@ class DivisionExtractor:
             extraction = self._extract_divisions(para_text)
 
             result = {
-                "para_id": idx,
-                "text": para_text[:200] + ("..." if len(para_text) > 200 else ""),
-                "divisions": extraction.get("divisions", []),
-                "confidence": extraction.get("confidence", 0)
+                "id": f"parag_{idx}",
+                "embedding": [],  # Placeholder for vector embeddings
+                "document": para_text,
+                "metadata": {
+                    "division": extraction.get("divisions", []),
+                    "confidence": extraction.get("confidence", 0),
+                    "source_page": idx
+                }
             }
 
             results.append(result)

@@ -14,11 +14,10 @@ PROJECT_ROOT = Path(__file__).parent
 DATA_DIR = PROJECT_ROOT / "data"
 INPUT_DIR = DATA_DIR / "input"
 PROCESSED_DIR = DATA_DIR / "processed"
-CACHE_DIR = DATA_DIR / "cache"
 OUTPUT_DIR = PROJECT_ROOT / "output"
 
 # Create directories
-for directory in [DATA_DIR, INPUT_DIR, PROCESSED_DIR, CACHE_DIR, OUTPUT_DIR]:
+for directory in [DATA_DIR, INPUT_DIR, PROCESSED_DIR, OUTPUT_DIR]:
     directory.mkdir(parents=True, exist_ok=True)
 
 # ============================================================================

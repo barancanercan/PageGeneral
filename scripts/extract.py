@@ -80,7 +80,7 @@ def main():
         
         unique_divisions = set()
         for result in all_results:
-            unique_divisions.update(result.get('divisions', []))
+            unique_divisions.update(result.get('metadata', {}).get('division', []))
         
         print(f"✅ Toplam extraction: {len(all_results)}")
         print(f"✅ Benzersiz tümen: {len(unique_divisions)}")
@@ -89,7 +89,7 @@ def main():
         if unique_divisions:
             print(f"\n🎖️  Bulunmuş tümenleri:")
             for div in sorted(unique_divisions):
-                count = sum(1 for r in all_results if div in r.get('divisions', []))
+                count = sum(1 for r in all_results if div in r.get('metadata', {}).get('division', []))
                 print(f"   - {div}: {count} paragraf")
     else:
         print("\n⚠️  Hiç extraction bulunamadı")

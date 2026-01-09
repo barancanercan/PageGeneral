@@ -1,19 +1,11 @@
 # PDF Parsing
 pypdf>=4.0.0
-pillow>=10.0.0
 
-# HuggingFace API (LLM Inference)
-huggingface-hub>=0.20.0
-
-# Embeddings (Vector DB için)
-sentence-transformers>=2.2.2
-chromadb>=0.4.10
-
-# Text Processing
-nltk>=3.8.0
+# LLM (Local Qwen2.5-7B)
+transformers>=4.36.0
+torch>=2.0.0
+accelerate>=0.25.0
 
 # Utilities
 tqdm>=4.66.0
-colorama>=0.4.6
-pydantic>=2.0.0
 python-dotenv>=1.0.0
