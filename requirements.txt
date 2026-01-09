@@ -1,7 +1,9 @@
 # PDF Parsing
-docling>=2.0.0
+pypdf>=4.0.0
 pillow>=10.0.0
-pypdf
+
+# HuggingFace API (LLM Inference)
+huggingface-hub>=0.20.0
 
 # Embeddings (Vector DB için)
 sentence-transformers>=2.2.2
@@ -10,14 +12,8 @@ chromadb>=0.4.10
 # Text Processing
 nltk>=3.8.0
 
-# LLM Communication
-requests>=2.31.0
-
 # Utilities
 tqdm>=4.66.0
 colorama>=0.4.6
 pydantic>=2.0.0
 python-dotenv>=1.0.0
-
-# Optional (şimdi yok)
-# rank-bm25, cross-encoder, torch vb. sonra ekleriz

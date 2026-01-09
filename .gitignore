@@ -1,12 +1,17 @@
+# Virtual Environment
+.venv/
+venv/
+ENV/
+
 # Python
 __pycache__/
 *.py[cod]
-*$py.class
+*.egg-info/
+.Python
 
-# Virtual Environment
-venv/
-.venv/
-ENV/
+# Environment
+.env
+.env.local
 
 # IDE
 .vscode/
@@ -15,14 +20,19 @@ ENV/
 
 # Data
 data/input/*.pdf
-data/input/*.PDF
 data/processed/
 data/cache/
+output/*.json
+output/*.txt
+
+# Logs
+*.log
 
 # OS
 .DS_Store
 Thumbs.db
 
-# Keep folders
+# Keep folder structure
 !data/input/.gitkeep
 !data/processed/.gitkeep
+!output/.gitkeep

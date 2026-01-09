@@ -1,6 +1,7 @@
 """
 PageGeneral - Division Extractor
 LLM-based extraction of Turkish Infantry Divisions from paragraphs
+Now using HuggingFace Transformers (local, no Ollama)
 """
 
 import re
@@ -11,7 +12,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from src.llm import OllamaClient
+from src.llm import HFClient
 import config
 
 
@@ -25,7 +26,7 @@ class DivisionExtractor:
                 e.g., ["4. Piyade Tümeni", "9. Piyade Tümeni", ...]
         """
         self.division_list = division_list
-        self.llm = OllamaClient()
+        self.llm = HFClient()
         self.book_name = None
         self.book_id = None
 
@@ -206,9 +207,9 @@ if __name__ == "__main__":
     extractor = DivisionExtractor(divisions)
 
     test_paragraphs = [
-        "4. Piyade Tümeni komutanı, cepheye gitmek üzere hazırlanıyordu.",
+        "5 nci Kafkas Tümeni komutanı, cepheye gitmek üzere hazırlanıyordu.",
         "Hava çok soğuktu ama askerler yürüyüşteydi.",
-        "9. Piyade Tümeni ile 24. Piyade Tümeni ortak operasyon yapacaklardı.",
+        "24 ncü Tümen ile 36 ncı Tümen ortak operasyon yapacaklardı.",
         "Hafif bir yağmur yağıyordu.",
     ]
 

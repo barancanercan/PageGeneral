@@ -1,8 +1,9 @@
 """
 PageGeneral - Configuration
-Minimal settings for PDF extraction
+HuggingFace API settings for Qwen2.5-7B-Instruct
 """
 
+import os
 from pathlib import Path
 
 # ============================================================================
@@ -21,12 +22,14 @@ for directory in [DATA_DIR, INPUT_DIR, PROCESSED_DIR, CACHE_DIR, OUTPUT_DIR]:
     directory.mkdir(parents=True, exist_ok=True)
 
 # ============================================================================
-# OLLAMA
+# HUGGINGFACE API
 # ============================================================================
 
-OLLAMA_BASE_URL = "http://localhost:11434"
-LLM_MODEL = "qwen2.5:7b"
-LLM_TEMPERATURE = 0.1
+HF_TOKEN = os.getenv("HF_TOKEN", "")
+HF_MODEL = "Qwen/Qwen2.5-7B-Instruct"
+
+# LLM settings
+LLM_TEMPERATURE = 0.1  # Düşük = daha deterministik
 LLM_MAX_TOKENS = 500
 
 # ============================================================================
