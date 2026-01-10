@@ -22,6 +22,9 @@ __pycache__/
 data/input/*.pdf
 data/processed/
 data/cache/
+data/vectordb/
+data/registry.json
+data/divisions.json
 output/*.json
 output/*.txt
 

@@ -1,11 +1,18 @@
-# PDF Parsing
+# PageGeneral - PDF'den Tümen Bilgisi Çıkarma
+
+# PDF
 pypdf>=4.0.0
 
-# LLM (Local Qwen2.5-7B)
-transformers>=4.36.0
-torch>=2.0.0
-accelerate>=0.25.0
+# Vector Database
+chromadb>=0.4.0
 
-# Utilities
+# Embeddings
+sentence-transformers>=2.2.0
+torch>=2.0.0
+
+# UI
+gradio>=4.0.0
+pandas>=2.0.0
+
+# Utils
 tqdm>=4.66.0
-python-dotenv>=1.0.0

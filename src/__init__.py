@@ -1,9 +1,22 @@
 """
-PageGeneral - Turkish Military Division Extraction from Historical PDFs
+PageGeneral - PDF'den Tümen Bilgisi Çıkarma
+
+Modül 1: ingest - PDF → VectorDB
+Modül 2: query  - VectorDB → JSON
 """
 
 from .pdf_parser import PDFParser
-from .division_extractor import DivisionExtractor
-from .llm import HFClient
+from .embedder import Embedder
+from .vector_store import VectorStore
+from .registry import BookRegistry
+from .ingest import IngestPipeline
+from .query import DivisionQuery
 
-__all__ = ["PDFParser", "DivisionExtractor", "HFClient"]
+__all__ = [
+    "PDFParser",
+    "Embedder",
+    "VectorStore",
+    "BookRegistry",
+    "IngestPipeline",
+    "DivisionQuery"
+]
