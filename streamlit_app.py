@@ -21,7 +21,7 @@ import config
 # Page config
 st.set_page_config(
     page_title="PageGeneral",
-    page_icon="📚",
+    page_icon="logo/logo.png",
     layout="wide"
 )
 
