@@ -1,265 +1,132 @@
 <p align="center">
-  <h1 align="center">PageGeneral</h1>
-  <p align="center">
-    <strong>Historical Document Intelligence</strong><br>
-    Extract structured information from Turkish military historical PDFs using Local LLM
-  </p>
+  <img src="logo/logo.png" alt="PageGeneral Logo" width="200">
 </p>
 
-<p align="center">
-  <img src="https://img.shields.io/badge/python-3.11+-blue.svg" alt="Python">
-  <img src="https://img.shields.io/badge/LLM-Qwen2.5--7B-green.svg" alt="LLM">
-  <img src="https://img.shields.io/badge/license-MIT-orange.svg" alt="License">
-  <img src="https://img.shields.io/badge/status-v1.0-brightgreen.svg" alt="Status">
-</p>
+# PageGeneral
 
----
+PDF'lerden tumen bilgisi cikarma araci. Tarihi Turk askeri belgelerinden tumen/firka bilgilerini otomatik olarak cikarir.
 
-## Overview
+## Ozellikler
 
-PageGeneral is a specialized NLP pipeline for extracting military division information from historical Turkish documents. It combines traditional regex pre-filtering with modern LLM capabilities to achieve high accuracy while running entirely on local hardware.
+- PDF'leri otomatik parse etme
+- Tumen/firka referanslarini tespit etme (regex tabanli)
+- Semantic embedding olusturma (sentence-transformers)
+- VectorDB depolama (ChromaDB)
+- JSON export (embedding dahil)
+- Streamlit web arayuzu
 
-### Key Features
-
-| Feature | Description |
-|---------|-------------|
-| **Local LLM** | Runs on CPU/GPU without API costs (Qwen2.5-7B) |
-| **Hybrid Extraction** | Regex pre-filter + LLM verification |
-| **Page Tracking** | Accurate source page numbers for citations |
-| **Dynamic Confidence** | 0.0-1.0 scoring based on match quality |
-| **Turkish Optimized** | Handles Turkish characters and military terminology |
-
----
-
-## How It Works
-
-```
-┌─────────────┐     ┌─────────────┐     ┌─────────────┐     ┌─────────────┐
-│   PDF       │────▶│   Parser    │────▶│   Regex     │────▶│    LLM      │
-│   Input     │     │  (pypdf)    │     │  Pre-filter │     │  (Qwen2.5)  │
-└─────────────┘     └─────────────┘     └─────────────┘     └─────────────┘
-                           │                   │                    │
-                           ▼                   ▼                    ▼
-                    Paragraphs with      Candidate          Structured JSON
-                    page numbers         paragraphs         with confidence
-```
-
----
-
-## Installation
-
-### Prerequisites
-
-- Python 3.11+
-- 16GB RAM (recommended for LLM)
-- ~15GB disk space (for model weights)
-
-### Setup
+## Kurulum
 
 ```bash
-# Clone repository
+# Clone
 git clone https://github.com/barancanercan/PageGeneral.git
 cd PageGeneral
 
-# Create virtual environment
+# Virtual environment
 python -m venv .venv
-source .venv/bin/activate  # Linux/Mac
-# .venv\Scripts\activate   # Windows
+.venv\Scripts\activate  # Windows
+# source .venv/bin/activate  # Linux/Mac
 
-# Install dependencies
+# Dependencies
 pip install -r requirements.txt
-
-# Set HuggingFace token (optional, for gated models)
-echo "HF_TOKEN=your_token_here" > .env
 ```
 
----
+## Kullanim
 
-## Quick Start
-
-### 1. Add PDF Files
+### Web Arayuzu (Streamlit)
 
 ```bash
-cp your_document.pdf data/input/
+streamlit run streamlit_app.py
 ```
 
-### 2. Configure Target Divisions
+Tarayicida `http://localhost:8501` adresini acin.
 
-Edit `config.py`:
-
-```python
-DIVISION_LIST = [
-    "5 nci Kafkas Tümeni",
-    "15 nci Tümen",
-    "36 ncı Tümen",
-    # Add more...
-]
-```
-
-### 3. Run Extraction
+### CLI
 
 ```bash
-python scripts/extract.py
+# PDF'leri VectorDB'ye yukle
+python run.py ingest
+
+# Tumen listesi
+python run.py query -l
+
+# JSON export
+python run.py query -d
 ```
 
-### 4. Check Results
-
-```bash
-cat output/extractions_*.json
-```
-
----
-
-## Output Format
+## Cikti Formati
 
 ```json
 {
-  "id": "parag_142",
-  "embedding": [],
-  "document": "Azerbaycan'daki 15 nci Tümen, 5 nci Kafkas Tümeni ve 36 ncı Tümen'den...",
+  "id": "parag_5",
+  "embedding": [384 deger...],
+  "document": "5 nci Kafkas Tumeni Sarikamis'ta...",
   "metadata": {
-    "division": ["15. Tümen", "5. Kafkas Tümeni", "36. Tümen"],
-    "confidence": 1.0,
-    "source_page": 241
-  },
-  "book": "Turk_istiklal_harbi",
-  "timestamp": "2024-01-09T13:31:00"
+    "division": ["5"],
+    "confidence": 0.95,
+    "source_page": 27
+  }
 }
 ```
 
-### Confidence Scoring
-
-| Score | Interpretation |
-|-------|----------------|
-| **1.0** | Division name found exactly as specified |
-| **0.8-0.9** | Division number matches, format slightly different |
-| **0.6-0.7** | Indirect or contextual reference |
-| **0.0** | No division detected |
-
----
-
-## Project Structure
+## Proje Yapisi
 
 ```
 PageGeneral/
-├── config.py                 # Configuration & division list
-├── requirements.txt          # Python dependencies
-├── scripts/
-│   └── extract.py            # Main extraction script
+├── streamlit_app.py    # Web UI
+├── run.py              # CLI
+├── config.py           # Ayarlar
+├── requirements.txt
+├── .streamlit/         # Streamlit config
+│   └── config.toml
 ├── src/
-│   ├── __init__.py
-│   ├── pdf_parser.py         # PDF → paragraphs with page info
-│   ├── llm.py                # Qwen2.5 local inference
-│   └── division_extractor.py # Hybrid extraction logic
-├── tests/
-│   └── test_2pages.py        # Page-range test script
+│   ├── pdf_parser.py   # PDF parse + division detection
+│   ├── embedder.py     # Sentence-transformers embedding
+│   ├── vector_store.py # ChromaDB
+│   ├── ingest.py       # PDF -> VectorDB
+│   └── query.py        # VectorDB -> JSON
 ├── data/
-│   ├── input/                # Place PDFs here
-│   └── processed/            # Cached markdown files
-├── output/                   # JSON extraction results
-└── docs/
-    └── V2_ROADMAP.md         # Future development plans
+│   ├── input/          # PDF'ler buraya
+│   └── vectordb/       # ChromaDB verileri
+└── output/             # JSON ciktilar
 ```
 
----
+## Teknolojiler
 
-## Configuration Reference
+- **PDF**: pypdf
+- **Embedding**: sentence-transformers (paraphrase-multilingual-MiniLM-L12-v2)
+- **VectorDB**: ChromaDB
+- **UI**: Streamlit
+- **ML**: PyTorch
 
-| Parameter | Default | Description |
-|-----------|---------|-------------|
-| `HF_MODEL` | `Qwen/Qwen2.5-7B-Instruct` | HuggingFace model ID |
-| `LLM_TEMPERATURE` | `0.1` | Lower = more deterministic |
-| `LLM_MAX_TOKENS` | `500` | Max response length |
-| `EXTRACTION_CONFIDENCE_THRESHOLD` | `0.5` | Minimum confidence to include |
-| `VERBOSE` | `True` | Print progress messages |
+## Streamlit Cloud Deploy
 
----
+1. GitHub'a push edin:
+   ```bash
+   git add .
+   git commit -m "Ready for deployment"
+   git push origin main
+   ```
 
-## Testing
+2. [share.streamlit.io](https://share.streamlit.io) adresine gidin
+
+3. "New app" tiklayin
+
+4. Ayarlar:
+   - Repository: `barancanercan/PageGeneral`
+   - Branch: `main`
+   - Main file path: `streamlit_app.py`
+
+5. "Deploy!" tiklayin
+
+**Not**: Ilk deploy sirasinda sentence-transformers modeli indirilecegi icin birkaç dakika bekleyebilir.
+
+## Local Deploy
 
 ```bash
-# Test with specific page range
-python tests/test_2pages.py
-
-# Check output
-cat output/test_2pages_output.json
+streamlit run streamlit_app.py --server.port 8501
 ```
 
----
+## Lisans
 
-## Performance
-
-| Metric | Value |
-|--------|-------|
-| PDF Parse Speed | ~1 sec / 100 pages |
-| LLM Inference | ~10 sec / paragraph (CPU) |
-| Memory Usage | ~8-12 GB |
-| Accuracy | High (with proper division list) |
-
----
-
-## Roadmap
-
-### v1.0 (Current)
-- [x] PDF parsing with page tracking
-- [x] Regex + LLM hybrid extraction
-- [x] Dynamic confidence scoring
-- [x] JSON output format
-
-### v2.0 (Planned)
-- [ ] Vector database integration (ChromaDB)
-- [ ] Multi-book search
-- [ ] Gradio web interface
-- [ ] Custom query support
-- [ ] CSV/Markdown export
-
-See [V2_ROADMAP.md](docs/V2_ROADMAP.md) for detailed plans.
-
----
-
-## Tech Stack
-
-| Component | Technology |
-|-----------|------------|
-| PDF Parsing | pypdf |
-| LLM | Qwen2.5-7B-Instruct |
-| ML Framework | PyTorch + Transformers |
-| Language | Python 3.11 |
-
----
-
-## Contributing
-
-Contributions are welcome! Please read the roadmap first to understand the project direction.
-
-```bash
-# Create feature branch
-git checkout -b feature/your-feature
-
-# Make changes and test
-python tests/test_2pages.py
-
-# Commit and push
-git commit -m "feat: your feature description"
-git push origin feature/your-feature
-```
-
----
-
-## License
-
-MIT License - see [LICENSE](LICENSE) for details.
-
----
-
-## Acknowledgments
-
-- [Qwen2.5](https://huggingface.co/Qwen) - Alibaba's open LLM
-- Turkish General Staff Military History Archives
-- HuggingFace Transformers team
-
----
-
-<p align="center">
-  <sub>Built with passion for historical research</sub>
-</p>
+MIT

@@ -92,9 +92,9 @@ def export_to_json(book_id, only_divisions):
     )
 
     if result["status"] == "success":
-        return f"✓ Kaydedildi: {result['output_file']}\n  {result['total_paragraphs']} paragraf"
+        return f"[OK] {result['output_file']}\n{result['total_paragraphs']} paragraf"
     else:
-        return f"Hata: {result.get('message')}"
+        return f"[ERROR] {result.get('message')}"
 
 
 def upload_book(file):
@@ -105,10 +105,10 @@ def upload_book(file):
     result = pipeline.ingest_pdf(Path(file.name), force=True)
 
     if result["status"] == "success":
-        msg = f"✓ Yüklendi: {result['paragraphs']} paragraf"
+        msg = f"[OK] Yuklendi: {result['paragraphs']} paragraf"
         return msg, gr.update(choices=get_books())
     else:
-        return f"Hata: {result.get('message')}", gr.update()
+        return f"[ERROR] {result.get('message')}", gr.update()
 
 
 # UI
@@ -121,7 +121,7 @@ with gr.Blocks(title="PageGeneral", theme=gr.themes.Soft()) as app:
     with gr.Row():
         # SOL: Kitaplar
         with gr.Column(scale=1):
-            gr.Markdown("### 📚 Kitaplar")
+            gr.Markdown("### Kitaplar")
             book_list = gr.Radio(
                 choices=get_books(),
                 label="VectorDB'deki kitaplar",
@@ -129,17 +129,17 @@ with gr.Blocks(title="PageGeneral", theme=gr.themes.Soft()) as app:
             )
             only_div = gr.Checkbox(label="Sadece tümen içerenler", value=True)
 
-            refresh_btn = gr.Button("🔄 Yenile")
+            refresh_btn = gr.Button("Yenile")
 
             gr.Markdown("---")
-            gr.Markdown("### 📤 Yeni Yükle")
+            gr.Markdown("### Yeni Yukle")
             upload_file = gr.File(label="PDF", file_types=[".pdf"])
             upload_btn = gr.Button("Yükle", variant="primary")
             upload_status = gr.Textbox(label="Durum", interactive=False, lines=1)
 
         # SAĞ: Paragraflar
         with gr.Column(scale=3):
-            gr.Markdown("### 📄 Paragraflar")
+            gr.Markdown("### Paragraflar")
             summary_box = gr.Textbox(label="Özet", interactive=False, lines=1)
 
             paragraph_table = gr.Dataframe(
@@ -151,7 +151,7 @@ with gr.Blocks(title="PageGeneral", theme=gr.themes.Soft()) as app:
             )
 
             with gr.Row():
-                export_btn = gr.Button("💾 JSON Export (embedding ile)", variant="primary")
+                export_btn = gr.Button("JSON Export (embedding ile)", variant="primary")
                 export_status = gr.Textbox(label="Export", interactive=False, lines=1)
 
             gr.Markdown("""

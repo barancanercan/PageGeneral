@@ -1,4 +1,5 @@
-# PageGeneral - PDF'den Tümen Bilgisi Çıkarma
+# PageGeneral - PDF'den Tumen Bilgisi Cikarma
+# Streamlit Cloud compatible
 
 # PDF
 pypdf>=4.0.0
@@ -6,12 +7,11 @@ pypdf>=4.0.0
 # Vector Database
 chromadb>=0.4.0
 
-# Embeddings
+# Embeddings (will install torch automatically)
 sentence-transformers>=2.2.0
-torch>=2.0.0
 
 # UI
-gradio>=4.0.0
+streamlit>=1.28.0
 pandas>=2.0.0
 
 # Utils
